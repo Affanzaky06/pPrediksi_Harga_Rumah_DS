@@ -6,6 +6,20 @@ Proyek Data Science dengan kerangka **CRISP-DM** untuk memahami dan memprediksi 
 - **Dosen pengampu:** Dhimas Arief Dharmawan
 - **Tahun ajaran:** 2026/2027 (semester ganjil)
 
+## Tim
+
+Nomor Kelompok : 9
+
+Nama Kelompok  : PERTALITE LANGKA 
+
+| Nama | NIM |
+|---|---|
+| Muhammad Rifty Alfattah | 123240093 |
+| Muhamad Atallah Alfa Dzaky | 123240105 |
+| Nicolaus Narindra Lianto | 123240100 |
+| Abyaz Affanzaky Shanahan | 123240130 |
+
+
 ## Daftar Isi
 
 1. [Latar belakang](#latar-belakang)
@@ -157,12 +171,3 @@ Hasil EDA pada dataset analisis (data mentah dikurangi duplikat dan baris yang t
 Jika memakai dataset ini, sitasi sumbernya:
 
 > pramudyadika. (2024). *Yogyakarta housing price (Indonesia)* [Data set]. Kaggle. https://www.kaggle.com/datasets/pramudyadika/yogyakarta-housing-price-ndonesia
-
-## Tim
-
-| Nama | NIM |
-|---|---|
-| Muhammad Rifty Alfattah | 123240093 |
-| Muhamad Atallah Alfa Dzaky | 123240105 |
-| Nicolaus Narindra Lianto | 123240100 |
-| Abyaz Affanzaky Shanahan | 123240130 |
