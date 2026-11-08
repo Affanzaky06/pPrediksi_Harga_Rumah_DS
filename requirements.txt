@@ -1,0 +1,14 @@
+# Inti (sudah dipakai di notebook)
+pandas>=3.0
+numpy>=1.26
+matplotlib>=3.8
+seaborn>=0.13
+
+# Menjalankan notebook
+jupyterlab>=4.0
+ipykernel>=6.29
+
+# Untuk tahap berikutnya (split, imputasi, encoding, scaling, model, VIF)
+scikit-learn>=1.4
+scipy>=1.12
+statsmodels>=0.14
