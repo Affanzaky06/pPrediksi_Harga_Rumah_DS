@@ -170,7 +170,10 @@ def load_model_bundle(
             continue
         try:
             bundle = joblib.load(candidate)
-            return _validate_bundle(bundle, candidate)
+            validated = _validate_bundle(bundle, candidate)
+            if hasattr(validated["model"], "n_jobs"):
+                validated["model"].n_jobs = 1
+            return validated
         except Exception as exc:  # noqa: BLE001 — fallback lintas versi/korup
             last_error = exc
             if idx == 0 and len(candidates) > 1:

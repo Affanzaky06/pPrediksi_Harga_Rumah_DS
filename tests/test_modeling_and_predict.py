@@ -4,6 +4,7 @@ import py_compile
 import sys
 import tempfile
 import unittest
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -19,11 +20,16 @@ from house_price.data.parsing import load_raw_data, parse_and_normalize
 from house_price.features.preprocessing import run_preprocessing_pipeline
 from house_price.models.demo import (
     build_feature_importance_df,
+    compute_carport_mnar_eda,
+    compute_correlation_tables,
+    compute_descriptive_stats,
+    compute_kruskal_wilayah,
+    compute_price_segment_distribution,
     simulate_wilayah_comparison,
     summarize_market_by_wilayah,
 )
 from house_price.models.evaluate import compute_regression_metrics, evaluate_by_wilayah
-from house_price.models.predict import format_rupiah, predict_house_price
+from house_price.models.predict import format_rupiah, predict_batch_log, predict_house_price
 from house_price.models.train import (
     REQUIRED_BUNDLE_KEYS,
     load_model_bundle,
@@ -134,6 +140,34 @@ class TestModelingAndPredict(unittest.TestCase):
         df_clean, _ = clean_listings(parse_and_normalize(df_raw))
         mkt_df = summarize_market_by_wilayah(df_clean)
         self.assertEqual(int(mkt_df["Jumlah_Listing"].sum()), 1384)
+
+        # New EDA helpers
+        desk_df = compute_descriptive_stats(df_clean)
+        self.assertEqual(len(desk_df), 6)
+        self.assertIn("skewness", desk_df.columns)
+
+        mnar_df = compute_carport_mnar_eda(df_clean)
+        self.assertEqual(mnar_df["Grup_Carport"].tolist(), ["Kosong", "1", "2", "3+"])
+
+        long_corr, target_corr = compute_correlation_tables(df_clean)
+        self.assertEqual(len(long_corr), 36)
+        self.assertIn("Pearson (log-log)", target_corr.columns)
+
+        seg_df = compute_price_segment_distribution(df_clean)
+        self.assertIn("Segmen Harga", seg_df.columns)
+
+        self.assertIsNotNone(compute_kruskal_wilayah(df_clean))
+        self.assertIsNone(compute_kruskal_wilayah(df_clean[df_clean["wilayah"] == "Sleman"]))
+
+        # Zero sklearn.utils.parallel warning even with empty warnings filters
+        expected_batch = self.model.predict(self.prep.X_test_final)
+        with warnings.catch_warnings():
+            warnings.resetwarnings()
+            warnings.simplefilter("error", UserWarning)
+            actual_batch = predict_batch_log(self.model, self.prep.X_test_final)
+            pred_single, _, _ = predict_house_price(bundle, 120.0, 100.0, 2, 3, 1, "Sleman")
+        self.assertTrue(np.allclose(actual_batch, expected_batch, atol=1e-12))
+        self.assertGreater(pred_single, 0.0)
 
         app_path = PROJECT_ROOT / "app.py"
         with tempfile.TemporaryDirectory() as tmpdir:

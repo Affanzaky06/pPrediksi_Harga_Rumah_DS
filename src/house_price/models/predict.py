@@ -1,4 +1,4 @@
-"""Fungsi inferensi tunggal dan pemformatan harga Rupiah (shared dengan app.py)."""
+"""Fungsi inferensi tunggal, batch aman-thread, dan pemformatan harga Rupiah."""
 
 from __future__ import annotations
 
@@ -28,6 +28,27 @@ def _validate_non_negative_finite(value: float, name: str) -> float:
     if not math.isfinite(val) or val < 0.0:
         raise ValueError(f"Parameter '{name}' harus berupa angka finite >= 0, diterima: {value!r}")
     return val
+
+
+def predict_batch_log(model, X_df: pd.DataFrame) -> np.ndarray:
+    """Menjalankan prediksi skala log10 tanpa memicu joblib.Parallel pada inferensi web.
+
+    Untuk RandomForestRegressor, merata-ratakan prediksi tiap decision tree secara langsung
+    menghindari overhead threadpool dan race condition `warnings.resetwarnings()` di
+    `sklearn.utils.parallel` pada Python 3.11 / Streamlit.
+    """
+    if hasattr(model, "estimators_") and getattr(model, "n_outputs_", 1) == 1:
+        expected_cols = getattr(model, "feature_names_in_", None)
+        if expected_cols is not None:
+            X_ordered = X_df[list(expected_cols)]
+        else:
+            X_ordered = X_df
+        X_arr = X_ordered.to_numpy(dtype=np.float32)
+        if not np.all(np.isfinite(X_arr)):
+            raise ValueError("Input fitur mengandung nilai non-finite (NaN/inf).")
+        preds = np.mean([est.predict(X_arr, check_input=False) for est in model.estimators_], axis=0)
+        return np.asarray(preds, dtype=float)
+    return np.asarray(model.predict(X_df), dtype=float)
 
 
 def predict_house_price(
@@ -78,6 +99,6 @@ def predict_house_price(
             row_features[col] = 1 if wilayah == nama_wil else 0
 
     df_final = pd.DataFrame([row_features])[fitur_final]
-    pred_log = float(model.predict(df_final)[0])
+    pred_log = float(predict_batch_log(model, df_final)[0])
     pred_rupiah = float(10.0 ** pred_log)
     return pred_rupiah, pred_log, df_final
