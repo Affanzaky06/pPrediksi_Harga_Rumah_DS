@@ -13,9 +13,9 @@ Proyek Data Science dengan kerangka CRISP-DM untuk memahami dan memprediksi **ha
 | Nama | NIM | Kontribusi |
 |---|---|---|
 | Muhammad Rifty Alfattah | 123240093 | Cleaning dan Preprocessing (audit kualitas data, cleaning berurutan, split anti-leakage, imputasi, encoding, scaling) serta seleksi fitur |
-| Muhamad Atallah Alfa Dzaky | 123240105 | Exploratory Data Analysis (statistik deskriptif, visualisasi, korelasi, dan Konklusi |
-| Nicolaus Narindra Lianto | 123240100 | Modelling (benchmark 5 model, hyperparameter tuning) dan Evaluasi (metrik Rupiah dan persen, learning curve, residual, evaluasi per wilayah) |
-| Abyaz Affanzaky Shanahan | 123240130 | Business Understanding, Data Gathering (sumber, lisensi, kamus data), penyusunan README dan pengelolaan repositori GitHub
+| Muhamad Atallah Alfa Dzaky | 123240105 | Exploratory Data Analysis (statistik deskriptif, visualisasi, korelasi, dan Konklusi) |
+| Nicolaus Narindra Lianto | 123240100 | Modelling dan Evaluasi (metrik Rupiah dan persen, learning curve, residual, evaluasi per wilayah) |
+| Abyaz Affanzaky Shanahan | 123240130 | Business Understanding, Data Gathering (sumber, lisensi, kamus data), penyusunan README dan pengelolaan repositori GitHub, dan  hyperparameter tuning
 
 Setiap anggota juga ikut meninjau dan menguji bagian anggota lain agar seluruh alur dapat dipertanggungjawabkan bersama.
 
