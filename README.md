@@ -28,7 +28,7 @@ Nama Kelompok  : PERTALITE LANGKA
 4. [Temuan sementara](#temuan-sementara)
 5. [Alur pengolahan data](#alur-pengolahan-data)
 6. [Cara menjalankan](#cara-menjalankan)
-7. [Rencana pemodelan (UAS)](#rencana-pemodelan-uas)
+7. [Hasil pemodelan dan evaluasi](#hasil-pemodelan-dan-evaluasi)
 8. [Keterbatasan](#keterbatasan)
 9. [Lisensi, etika, dan sitasi](#lisensi-etika-dan-sitasi)
 10. [Tim](#tim)
@@ -47,12 +47,12 @@ Agen properti di Yogyakarta umumnya menentukan harga pasang berdasarkan pengalam
 
 | Fase CRISP-DM | Status | Keterangan |
 |---|---|---|
-| Business Understanding | Selesai (UTS) | Masalah, stakeholder, tujuan SMART, metrik, risiko dan etika |
-| Data Understanding | Selesai (UTS) | Sumber dan lisensi, data dictionary, kualitas data, EDA, representativitas |
-| Data Preparation | Berjalan | Konversi tipe data, penandaan anomali, koreksi wilayah; pipeline akhir menyusul |
-| Modeling | Direncanakan (UAS) | Baseline, kandidat model, validasi *grouped k-fold* |
-| Evaluation | Direncanakan (UAS) | Metrik, kinerja per wilayah dan segmen harga, *fairness* |
-| Deployment | Direncanakan (UAS) | Notebook demo, skema I/O, rencana pemantauan *drift* |
+| Business Understanding | Selesai | Masalah, stakeholder, tujuan SMART, metrik, risiko dan etika |
+| Data Understanding | Selesai | Sumber dan lisensi, data dictionary, audit kualitas data, EDA, representativitas |
+| Data Preparation | Selesai | Parsing tipe data, koreksi wilayah, cleaning berurutan (1.384 baris), split *grouped-stratified*, scaling & seleksi fitur (6 fitur) |
+| Modeling | Selesai | Benchmark 5 model dengan *GroupKFold* (5-fold) & *hyperparameter tuning* `RandomForestRegressor` |
+| Evaluation | Selesai | Evaluasi data uji ($R^2 = 87,27\%$, $\text{MdAPE} = 14,71\%$, $\text{MAE} = \text{Rp } 352,08\text{ Juta}$), analisis residual & evaluasi per wilayah |
+| Deployment | Selesai | Aplikasi web multipage Streamlit (`app.py` + `app_pages/`), CLI runner (`main.py`), dan 14 *unit test* otomatis |
 
 ## Dataset
 
@@ -137,7 +137,7 @@ Hasil EDA pada dataset analisis (data mentah dikurangi duplikat dan baris yang t
 ├── tests/                              # Unit test (unittest / pytest)
 ├── model_artifacts/
 │   └── model_prediksi_rumah_jogja.joblib # Artefak model utama (diperbarui langsung saat training)
-└── progress2.ipynb                     # Arsip notebook monolitik awal
+└── prediksi.ipynb                      # Arsip notebook monolitik lengkap
 ```
 
 1. **Siapkan lingkungan Python** (disarankan 3.10 atau lebih baru)
@@ -173,22 +173,22 @@ Hasil EDA pada dataset analisis (data mentah dikurangi duplikat dan baris yang t
    *(Jika dibuka di mesin dengan versi `scikit-learn` berbeda dari artefak tersimpan, `app.py` otomatis membangun ulang `model_artifacts/model_prediksi_rumah_jogja.joblib` agar kompatibel dan bebas warning.)*
 
 ### Catatan Pengembangan Lanjutan
-- `GridSearchCV` dan `learning_curve` pada tahap modeling saat ini masih menggunakan `KFold` standar (`cv=3` / `cv=5`) agar sejalan dengan hasil awal; ke depan dapat ditingkatkan memakai `GroupKFold` per `deskripsi` untuk mencegah *leakage* antar unit kembar saat tuning.
-- `KOLOM_SCALE` masih menyertakan `kamar_tidur` dan `carport` untuk kompatibilitas skema scaler; ke depan dapat disederhanakan hanya pada fitur numerik/diskrit yang masuk `FITUR_FINAL`.
+- `GridSearchCV` dan `learning_curve` pada tahap modeling telah dilengkapi dengan `GroupKFold(n_splits=5)` per `deskripsi` serta tuning parameter `max_features` untuk mendekorelasi pohon-pohon pada Random Forest dan mencegah *data leakage* antar unit kembar.
+- `KOLOM_SCALE` masih menyertakan `kamar_tidur` dan `carport` untuk kompatibilitas skema scaler; di UI Streamlit keduanya ditempatkan pada expander kompatibilitas opsional.
 
-## Rencana Pemodelan (UAS)
+## Hasil Pemodelan dan Evaluasi
 
-| Komponen | Rencana |
+| Komponen | Implementasi & Hasil Aktual |
 |---|---|
-| Target | Harga penawaran |
-| Fitur | Luas tanah, luas bangunan, kamar tidur, kamar mandi, carport, wilayah |
-| Transformasi | Log pada harga dan luas untuk model linear; model berbasis pohon memakai skala asli |
-| Baseline | Median harga per kecamatan, regresi linear |
-| Kandidat model | Linear Regresion, Random Forest |
-| Validasi | *Grouped k-fold* (unit kembar dalam satu lipatan); tidak memakai *time series split* karena tidak ada kolom tanggal |
-| Metrik | MAE, RMSE, R², MAPE, MdAPE; kinerja per wilayah dan per segmen harga |
-| Target awal | MAPE ≤ 20% dan R² ≥ 0,75 pada data uji (dapat disesuaikan setelah baseline) |
-| Deployment | Notebook demo dengan skema I/O terdokumentasi, keluaran berupa rentang prediksi, rencana pemantauan *drift* dan *retraining* |
+| Target | $\log_{10}(\text{harga penawaran})$, dikembalikan ke Rupiah dengan $10^{\hat{y}}$ |
+| Fitur Final (6 fitur) | `log_luas_bangunan`, `log_luas_tanah`, `kamar_mandi`, dan 3 *dummy* `wilayah` (baseline: Bantul) |
+| Validasi & Split | `StratifiedGroupKFold` (80% Train = 1.107 baris, 20% Test = 277 baris; 0 kebocoran judul iklan) |
+| Kandidat Model Diuji | Linear Regression, Ridge Regression, SVR (RBF), Random Forest, Gradient Boosting |
+| Model Terpilih | `RandomForestRegressor(n_estimators=100, max_depth=15, max_features=0.5, min_samples_leaf=2, min_samples_split=5, random_state=42)` |
+| Skor Validasi Silang (Train) | 5-Fold `GroupKFold` CV RMSE ($\log_{10}$) = **0,1440** |
+| Kinerja Data Uji ($n = 277$) | **$R^2 = 87,27\%$** (target $\ge 75\%$), **MdAPE = 14,71%** (target $\le 20\%$), **MAPE = 21,32%**, **MAE = Rp 352.079.279**, **RMSE = Rp 828.875.988** |
+| Perbandingan Baseline | Melampaui *Baseline Median per Wilayah* ($R^2 = 14,76\%$, MdAPE $= 55,17\%$) maupun Regresi Linear ($R^2 = 82,10\%$, MdAPE $= 21,93\%$) |
+| Deployment | Aplikasi web multipage Streamlit (`streamlit run app.py`) dengan simulasi harga, rentang wajar $\pm 14,71\%$, uji sampel nyata *test set*, EDA interaktif, dan *auto-rebuild* lintas-versi `scikit-learn` |
 
 ## Keterbatasan
 
@@ -204,7 +204,7 @@ Hasil EDA pada dataset analisis (data mentah dikurangi duplikat dan baris yang t
 - **Data:** CC BY-NC 4.0 (penggunaan non-komersial dengan atribusi). Lisensi ini ditetapkan oleh pengunggah di Kaggle dan tidak mengalihkan hak atas konten asli Rumah123.
 - **Penggunaan:** hanya untuk keperluan akademik. Prototipe tidak dipublikasikan sebagai layanan komersial.
 - **Privasi:** kolom `description` tidak dipakai sebagai fitur model dan tidak ditampilkan mentah.
-- **Kode:** [pilih lisensi untuk kode, mis. MIT, lalu tambahkan berkas `LICENSE`].
+- **Kode:** digunakan untuk keperluan akademik mata kuliah Data Science UPN "Veteran" Yogyakarta.
 
 Jika memakai dataset ini, sitasi sumbernya:
 

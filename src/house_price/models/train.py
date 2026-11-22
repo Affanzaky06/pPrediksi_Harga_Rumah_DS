@@ -39,10 +39,11 @@ REQUIRED_BUNDLE_KEYS: set[str] = {
 
 DEFAULT_RF_PARAM_GRID: dict[str, list[object]] = {
     "n_estimators": [100, 200, 300],
-    "max_depth": [10, 20, 30],
+    "max_depth": [10, 15, 20, 30],
+    "max_features": [0.5, 0.7, 0.8, 1.0],
     "min_samples_split": [2, 5, 10],
     "min_samples_leaf": [1, 2, 4],
-    "bootstrap": [True, False],
+    "bootstrap": [True],
 }
 
 
@@ -53,11 +54,13 @@ def benchmark_models(
     random_state: int = RANDOM_STATE,
 ) -> pd.DataFrame:
     """Membandingkan 5 kandidat model menggunakan GroupKFold 5-fold CV."""
+    rf_params = dict(BEST_RF_PARAMS)
+    rf_params["random_state"] = random_state
     kandidat = {
         "Linear Regression": LinearRegression(),
         "Ridge Regression": Ridge(alpha=1.0, random_state=random_state),
         "SVR (RBF)": SVR(C=1.0, epsilon=0.1),
-        "Random Forest": RandomForestRegressor(n_estimators=300, random_state=random_state, n_jobs=-1),
+        "Random Forest": RandomForestRegressor(**rf_params),
         "Gradient Boosting": GradientBoostingRegressor(random_state=random_state),
     }
     cv = GroupKFold(n_splits=5)
@@ -86,18 +89,23 @@ def run_rf_grid_search(
     X_test_final: pd.DataFrame | None = None,
     y_test: pd.Series | None = None,
     param_grid: dict[str, list[object]] | None = None,
-    cv: int | object = 3,
+    cv: int | object | None = None,
     groups: pd.Series | None = None,
     random_state: int = RANDOM_STATE,
     verbose: int = 0,
 ) -> tuple[RandomForestRegressor, dict[str, object], float]:
-    """Menjalankan GridSearchCV untuk RandomForestRegressor."""
+    """Menjalankan GridSearchCV untuk RandomForestRegressor (GroupKFold bila groups diberikan)."""
     start = time.time()
-    base_rf = RandomForestRegressor(n_estimators=300, random_state=random_state, n_jobs=-1)
+    if cv is None:
+        cv_splitter: int | object = GroupKFold(n_splits=5) if groups is not None else 5
+    else:
+        cv_splitter = cv
+    base_rf = RandomForestRegressor(random_state=random_state, n_jobs=-1)
     grid = GridSearchCV(
         estimator=base_rf,
         param_grid=param_grid or DEFAULT_RF_PARAM_GRID,
-        cv=cv,
+        cv=cv_splitter,
+        scoring="neg_root_mean_squared_error",
         n_jobs=-1,
         verbose=verbose,
     )

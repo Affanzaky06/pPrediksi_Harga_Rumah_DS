@@ -210,7 +210,7 @@ with st.container(border=True):
             height="stretch",
         )
         st.metric(
-            label="Rentang wajar (±15,65% MdAPE)",
+            label=f"Rentang wajar (±{DEFAULT_MDAPE_RATE * 100:.2f}% MdAPE)",
             value=f"{ringkas_bawah} – {ringkas_atas}",
             delta="Berbasis error median data test",
             delta_color="off",

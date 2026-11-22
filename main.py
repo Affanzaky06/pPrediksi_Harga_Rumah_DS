@@ -46,6 +46,7 @@ def run_pipeline(
             prep.y_train,
             X_test_final=prep.X_test_final,
             y_test=prep.y_test,
+            groups=prep.train_df["deskripsi"].str.lower(),
         )
         print(f"Best parameters (GridSearchCV): {best_params}")
     else:

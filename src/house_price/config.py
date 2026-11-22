@@ -117,12 +117,13 @@ MIN_HARGA_PER_M2_TANAH: float = 1e6
 
 BEST_RF_PARAMS: dict[str, object] = {
     "bootstrap": True,
-    "max_depth": 20,
+    "max_depth": 15,
+    "max_features": 0.5,
     "min_samples_leaf": 2,
-    "min_samples_split": 10,
-    "n_estimators": 300,
+    "min_samples_split": 5,
+    "n_estimators": 100,
     "n_jobs": -1,
     "random_state": RANDOM_STATE,
 }
 
-DEFAULT_MDAPE_RATE: float = 0.1565
+DEFAULT_MDAPE_RATE: float = 0.1471

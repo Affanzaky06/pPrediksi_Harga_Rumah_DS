@@ -108,7 +108,7 @@ with st.container(border=True):
             C --> D["StratifiedGroupKFold (1.107 Train / 277 Test)"]
             D --> E["Imputasi Train-Only + Log10 + StandardScaler"]
             E --> F["Seleksi Fitur: VIF & Drop-Column CV (6 Fitur)"]
-            F --> G["Random Forest (300 trees) + Estimasi Streamlit"]
+            F --> G["Random Forest (100 trees, max_features=0.5) + Estimasi Streamlit"]
         """,
         alt="Diagram alur pipeline Data Science dari data mentah hingga prediksi Streamlit",
     )
@@ -153,7 +153,7 @@ with st.container(border=True):
         {"Komponen": "Split anti-leakage", "Implementasi": "StratifiedGroupKFold (80/20) dikelompokkan per judul deskripsi"},
         {"Komponen": "Imputasi & encoding", "Implementasi": "Median train-only (KT=3, KM=2), OHE wilayah (baseline: Bantul)"},
         {"Komponen": "Transformasi & scaling", "Implementasi": "Log10 target & luas; StandardScaler fit hanya pada data train"},
-        {"Komponen": "Algoritma model", "Implementasi": "RandomForestRegressor (n_estimators=300, max_depth=20, min_samples_leaf=2, min_samples_split=10)"},
+        {"Komponen": "Algoritma model", "Implementasi": "RandomForestRegressor (n_estimators=100, max_depth=15, max_features=0.5, min_samples_leaf=2, min_samples_split=5)"},
     ])
     st.table(spec_df, alt="Ringkasan spesifikasi teknis tiap tahap pipeline machine learning")
 

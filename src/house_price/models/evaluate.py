@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.model_selection import learning_curve
+from sklearn.model_selection import GroupKFold, learning_curve
 
 
 def compute_regression_metrics(
@@ -59,12 +59,13 @@ def compute_learning_curve_stats(
     groups: pd.Series | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Menghitung ukuran set, training MSE, dan validation MSE untuk learning curve."""
+    cv_splitter = GroupKFold(n_splits=cv) if (groups is not None and isinstance(cv, int)) else cv
     train_sizes, train_scores, test_scores = learning_curve(
         estimator,
         X_train_final,
         y_train,
         groups=groups,
-        cv=cv,
+        cv=cv_splitter,
         scoring="neg_mean_squared_error",
         n_jobs=-1,
     )

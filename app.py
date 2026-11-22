@@ -73,7 +73,7 @@ pages = [
 current_page = st.navigation(pages, position="top")
 
 with st.sidebar:
-    st.subheader("Proyek Sains Data", icon=":material/real_estate_agent:")
+    st.subheader("Proyek Data Science", icon=":material/real_estate_agent:")
     st.badge("Model aktif & siap demo", icon=":material/check_circle:", color="green")
     st.caption(
         "Prediksi harga penawaran rumah di wilayah D.I. Yogyakarta berbasis data Rumah123."
@@ -91,7 +91,7 @@ with st.sidebar:
     st.markdown("**Ringkasan artefak**")
     st.caption(
         f"Artefak: `{artifact_name}`\n"
-        "Algoritma: `RandomForestRegressor` (300 trees)\n"
+        "Algoritma: `RandomForestRegressor` (100 trees, tuned)\n"
         "Fitur final: 6 fitur (log-luas, kamar mandi, dummy wilayah)"
     )
 
@@ -102,7 +102,7 @@ st.caption(
 )
 
 with st.container(horizontal=True):
-    st.badge("Random Forest (300 trees)", icon=":material/layers:", color="blue")
+    st.badge("Random Forest (100 trees, tuned)", icon=":material/layers:", color="blue")
     st.badge(f"R² Test: {metrics['r2'] * 100:.2f}%", icon=":material/analytics:", color="green")
     st.badge(f"MdAPE: {metrics['mdape']:.2f}%", icon=":material/fact_check:", color="violet")
     st.badge(f"{len(df_clean):,} listing bersih", icon=":material/dataset:", color="gray")
@@ -110,5 +110,5 @@ with st.container(horizontal=True):
 current_page.run()
 
 st.caption(
-    f"Proyek Sains Data UPN \"Veteran\" Yogyakarta · Paket modular `src/house_price/` · Artefak aktif: `{artifact_name}`"
+    f"Proyek Data Science UPN \"Veteran\" Yogyakarta · Paket modular `src/house_price/` · Artefak aktif: `{artifact_name}`"
 )
