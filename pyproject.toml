@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "house-price"
+version = "0.1.0"
+description = "Modular data science pipeline for Yogyakarta house price prediction."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas>=2.0",
+    "numpy>=1.26",
+    "matplotlib>=3.8",
+    "seaborn>=0.13",
+    "scikit-learn>=1.4",
+    "scipy>=1.12",
+    "joblib>=1.3",
+]
+
+[project.optional-dependencies]
+web = [
+    "streamlit>=1.57",
+]
+notebook = [
+    "jupyterlab>=4.0",
+    "ipykernel>=6.29",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
