@@ -45,28 +45,28 @@ pages = [
         title="Simulasi & kalkulator",
         icon=":material/calculate:",
         default=True,
-        help=(
-            "Simulasi estimasi harga pasar rumah di DIY lengkap dengan preset demo, "
-            "uji sampel nyata dari data test, dan perbandingan antar-wilayah."
-        ),
+        # help=(
+        #     "Simulasi estimasi harga pasar rumah di DIY lengkap dengan preset demo, "
+        #     "uji sampel nyata dari data test, dan perbandingan antar-wilayah."
+        # ),
     ),
     st.Page(
         "app_pages/02_eda.py",
         title="Eksplorasi & EDA",
         icon=":material/analytics:",
-        help=(
-            "Eksplorasi interaktif 1.384 data listing bersih: distribusi harga dan fitur, "
-            "korelasi log-log, anomali carport MNAR, dan bias wilayah."
-        ),
+        # help=(
+        #     "Eksplorasi interaktif 1.384 data listing bersih: distribusi harga dan fitur, "
+        #     "korelasi log-log, anomali carport MNAR, dan bias wilayah."
+        # ),
     ),
     st.Page(
         "app_pages/03_metodologi.py",
         title="Metodologi & evaluasi",
         icon=":material/menu_book:",
-        help=(
-            "Evaluasi model pada 277 data uji, benchmark 5 algoritma, grafik Aktual vs Prediksi, "
-            "analisis residual, dan alur pipeline CRISP-DM."
-        ),
+        # help=(
+        #     "Evaluasi model pada 277 data uji, benchmark 5 algoritma, grafik Aktual vs Prediksi, "
+        #     "analisis residual, dan alur pipeline CRISP-DM."
+        # ),
     ),
 ]
 
