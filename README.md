@@ -134,8 +134,7 @@ Hasil EDA pada dataset analisis (data mentah dikurangi duplikat dan baris yang t
 │   └── 04_modeling_evaluation.ipynb
 ├── tests/                              # Unit test (unittest / pytest)
 ├── model_artifacts/
-│   ├── model_prediksi_rumah_jogja.joblib         # Artefak legacy (scikit-learn 1.8.0)
-│   └── model_prediksi_rumah_jogja_modular.joblib # Artefak pipeline modular (scikit-learn 1.9.0)
+│   └── model_prediksi_rumah_jogja.joblib # Artefak model utama (diperbarui langsung saat training)
 └── progress2.ipynb                     # Arsip notebook monolitik awal
 ```
 
@@ -147,7 +146,7 @@ Hasil EDA pada dataset analisis (data mentah dikurangi duplikat dan baris yang t
    pip install -r requirements.txt
    ```
 
-2. **Jalankan pipeline end-to-end via CLI** (membangun checkpoint `data/processed/` dan melatih ulang model ke `model_artifacts/model_prediksi_rumah_jogja_modular.joblib`):
+2. **Jalankan pipeline end-to-end via CLI** (membangun checkpoint `data/processed/` dan menimpa model utama di `model_artifacts/model_prediksi_rumah_jogja.joblib` sesuai versi `scikit-learn` lokal):
 
    ```bash
    python main.py
@@ -168,6 +167,8 @@ Hasil EDA pada dataset analisis (data mentah dikurangi duplikat dan baris yang t
    ```bash
    streamlit run app.py
    ```
+
+   *(Jika dibuka di mesin dengan versi `scikit-learn` berbeda dari artefak tersimpan, `app.py` otomatis membangun ulang `model_artifacts/model_prediksi_rumah_jogja.joblib` agar kompatibel dan bebas warning.)*
 
 ### Catatan Pengembangan Lanjutan
 - `GridSearchCV` dan `learning_curve` pada tahap modeling saat ini masih menggunakan `KFold` standar (`cv=3` / `cv=5`) agar sejalan dengan hasil awal; ke depan dapat ditingkatkan memakai `GroupKFold` per `deskripsi` untuk mencegah *leakage* antar unit kembar saat tuning.

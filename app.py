@@ -20,7 +20,6 @@ import streamlit as st
 
 from house_price.config import (
     DEFAULT_MDAPE_RATE,
-    LEGACY_MODEL_ARTIFACT_PATH,
     MODEL_ARTIFACT_PATH,
     WILAYAH_MERGE_MAP,
 )
@@ -52,22 +51,14 @@ st.set_page_config(
 
 @st.cache_resource(max_entries=2)
 def get_model_bundle() -> tuple[dict, str]:
-    """Memuat artefak model modular dengan fallback otomatis ke artefak legacy."""
+    """Memuat satu sumber artefak model; otomatis rebuild bila versi scikit-learn berbeda."""
     try:
-        bundle = load_model_bundle(
-            path=MODEL_ARTIFACT_PATH,
-            fallback_path=LEGACY_MODEL_ARTIFACT_PATH,
-        )
-        source_label = (
-            MODEL_ARTIFACT_PATH.name
-            if MODEL_ARTIFACT_PATH.exists()
-            else LEGACY_MODEL_ARTIFACT_PATH.name
-        )
-        return bundle, source_label
+        bundle = load_model_bundle(path=MODEL_ARTIFACT_PATH, auto_rebuild=True)
+        return bundle, MODEL_ARTIFACT_PATH.name
     except FileNotFoundError:
         st.error(
-            f"Artefak model tidak ditemukan di `{MODEL_ARTIFACT_PATH}` maupun "
-            f"`{LEGACY_MODEL_ARTIFACT_PATH}`. Jalankan `python main.py` terlebih dahulu.",
+            f"Artefak model tidak ditemukan di `{MODEL_ARTIFACT_PATH}` dan data mentah "
+            "tidak tersedia untuk rebuild otomatis. Jalankan `python main.py` terlebih dahulu.",
             icon=":material/error:",
         )
         st.stop()

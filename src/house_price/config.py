@@ -6,8 +6,7 @@ PROJECT_ROOT: Path = Path(__file__).resolve().parents[2]
 RAW_DATA_PATH: Path = PROJECT_ROOT / "rumah123_yogya_unfiltered.csv"
 PROCESSED_DATA_DIR: Path = PROJECT_ROOT / "data" / "processed"
 MODEL_ARTIFACTS_DIR: Path = PROJECT_ROOT / "model_artifacts"
-MODEL_ARTIFACT_PATH: Path = MODEL_ARTIFACTS_DIR / "model_prediksi_rumah_jogja_modular.joblib"
-LEGACY_MODEL_ARTIFACT_PATH: Path = MODEL_ARTIFACTS_DIR / "model_prediksi_rumah_jogja.joblib"
+MODEL_ARTIFACT_PATH: Path = MODEL_ARTIFACTS_DIR / "model_prediksi_rumah_jogja.joblib"
 
 RANDOM_STATE: int = 42
 

@@ -47,28 +47,53 @@ class TestModelingAndPredict(unittest.TestCase):
         cls.prep = run_preprocessing_pipeline(df_clean)
         cls.model = train_final_model(cls.prep.X_train_final, cls.prep.y_train)
 
-    def test_save_and_load_bundle_keys_and_fallback(self):
+    def test_save_and_load_bundle_keys_and_auto_rebuild(self):
+        from unittest.mock import patch
+        from sklearn.exceptions import InconsistentVersionWarning
+
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
-            bundle_path = tmp / "model_modular.joblib"
-            fallback_path = tmp / "model_legacy.joblib"
+            bundle_path = tmp / "model.joblib"
             corrupt_path = tmp / "corrupt.joblib"
+            missing_path = tmp / "missing.joblib"
 
             save_model_bundle(self.model, self.prep, path=bundle_path)
-            save_model_bundle(self.model, self.prep, path=fallback_path)
             corrupt_path.write_bytes(b"not-a-valid-joblib-pickle")
 
-            loaded = load_model_bundle(path=bundle_path, fallback_path=None)
+            loaded = load_model_bundle(path=bundle_path, auto_rebuild=False)
             self.assertEqual(set(loaded.keys()), REQUIRED_BUNDLE_KEYS)
+            self.assertEqual(loaded["model"].n_jobs, 1)
 
-            # Missing primary falls back to legacy
-            loaded_missing = load_model_bundle(path=tmp / "missing.joblib", fallback_path=fallback_path)
-            self.assertEqual(set(loaded_missing.keys()), REQUIRED_BUNDLE_KEYS)
+            # auto_rebuild=False raises when missing or corrupt
+            with self.assertRaises(FileNotFoundError):
+                load_model_bundle(path=missing_path, auto_rebuild=False)
+            with self.assertRaises(Exception):
+                load_model_bundle(path=corrupt_path, auto_rebuild=False)
 
-            # Corrupt/incompatible primary falls back to legacy
+            # auto_rebuild=True rebuilds seamlessly when missing
             with self.assertLogs("house_price.models.train", level="WARNING"):
-                loaded_corrupt = load_model_bundle(path=corrupt_path, fallback_path=fallback_path)
-            self.assertEqual(set(loaded_corrupt.keys()), REQUIRED_BUNDLE_KEYS)
+                rebuilt_missing = load_model_bundle(path=missing_path, auto_rebuild=True)
+            self.assertTrue(missing_path.exists())
+            self.assertEqual(set(rebuilt_missing.keys()), REQUIRED_BUNDLE_KEYS)
+
+            # auto_rebuild=True rebuilds seamlessly when InconsistentVersionWarning occurs
+            mismatch_path = tmp / "mismatch.joblib"
+            save_model_bundle(self.model, self.prep, path=mismatch_path)
+
+            def _warn_on_load(_path):
+                import warnings
+                warnings.warn(
+                    InconsistentVersionWarning(
+                        estimator_name="RandomForestRegressor",
+                        current_sklearn_version="1.9.0",
+                        original_sklearn_version="1.8.0",
+                    )
+                )
+
+            with patch("house_price.models.train.joblib.load", side_effect=_warn_on_load):
+                with self.assertLogs("house_price.models.train", level="WARNING"):
+                    rebuilt_mismatch = load_model_bundle(path=mismatch_path, auto_rebuild=True)
+            self.assertEqual(set(rebuilt_mismatch.keys()), REQUIRED_BUNDLE_KEYS)
 
     def test_evaluate_metrics_and_wilayah_breakdown(self):
         y_pred_log = self.model.predict(self.prep.X_test_final)
@@ -84,7 +109,7 @@ class TestModelingAndPredict(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             bundle_path = Path(tmpdir) / "bundle.joblib"
             save_model_bundle(self.model, self.prep, path=bundle_path)
-            bundle = load_model_bundle(path=bundle_path, fallback_path=None)
+            bundle = load_model_bundle(path=bundle_path, auto_rebuild=False)
 
         pred_rp, pred_log, df_final = predict_house_price(
             bundle=bundle,
@@ -119,7 +144,7 @@ class TestModelingAndPredict(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             bundle_path = Path(tmpdir) / "bundle.joblib"
             save_model_bundle(self.model, self.prep, path=bundle_path)
-            bundle = load_model_bundle(path=bundle_path, fallback_path=None)
+            bundle = load_model_bundle(path=bundle_path, auto_rebuild=False)
 
         sim_df = simulate_wilayah_comparison(
             bundle=bundle,

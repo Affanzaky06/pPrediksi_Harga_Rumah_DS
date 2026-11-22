@@ -5,9 +5,12 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 import time
+import warnings
 import joblib
 import pandas as pd
+import sklearn
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+from sklearn.exceptions import InconsistentVersionWarning
 from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import GridSearchCV, GroupKFold, cross_validate
@@ -15,11 +18,13 @@ from sklearn.svm import SVR
 
 from house_price.config import (
     BEST_RF_PARAMS,
-    LEGACY_MODEL_ARTIFACT_PATH,
     MODEL_ARTIFACT_PATH,
     RANDOM_STATE,
+    RAW_DATA_PATH,
 )
-from house_price.features.preprocessing import PreprocessedData
+from house_price.data.cleaning import clean_listings
+from house_price.data.parsing import load_raw_data, parse_and_normalize
+from house_price.features.preprocessing import PreprocessedData, run_preprocessing_pipeline
 
 logger = logging.getLogger(__name__)
 
@@ -152,39 +157,69 @@ def _validate_bundle(bundle: object, source_path: Path) -> dict:
     return bundle
 
 
+def build_and_save_bundle(
+    output_path: Path = MODEL_ARTIFACT_PATH,
+    raw_path: Path = RAW_DATA_PATH,
+    save_to_disk: bool = True,
+) -> dict:
+    """Membangun ulang model dari data mentah sesuai versi scikit-learn lokal."""
+    df_raw = load_raw_data(raw_path)
+    data_parsed = parse_and_normalize(df_raw)
+    df_clean, _ = clean_listings(data_parsed)
+    prep = run_preprocessing_pipeline(df_clean)
+    model = train_final_model(prep.X_train_final, prep.y_train)
+
+    bundle = {
+        "model": model,
+        "scaler": prep.scaler,
+        "fitur_final": prep.fitur_final,
+        "kolom_scale": prep.kolom_scale,
+        "median_train": prep.median_train,
+        "kategori_wilayah": prep.kategori_wilayah,
+    }
+
+    if save_to_disk:
+        try:
+            save_model_bundle(model, prep, path=output_path)
+        except OSError as exc:
+            logger.warning("Tidak dapat menyimpan ulang artefak ke %s: %s", output_path, exc)
+
+    if hasattr(bundle["model"], "n_jobs"):
+        bundle["model"].n_jobs = 1
+    return bundle
+
+
 def load_model_bundle(
     path: Path = MODEL_ARTIFACT_PATH,
-    fallback_path: Path | None = LEGACY_MODEL_ARTIFACT_PATH,
+    auto_rebuild: bool = True,
+    raw_path: Path = RAW_DATA_PATH,
 ) -> dict:
-    """Memuat artefak model dengan fallback otomatis ke artefak legacy bila gagal."""
-    candidates = [path]
-    if fallback_path is not None and fallback_path != path:
-        candidates.append(fallback_path)
+    """Memuat artefak model tunggal; otomatis rebuild jika hilang atau beda versi scikit-learn."""
+    load_error: Exception | None = None
 
-    last_error: Exception | None = None
-    for idx, candidate in enumerate(candidates):
-        if not candidate.exists():
-            last_error = FileNotFoundError(f"File model tidak ditemukan: {candidate}")
-            if idx == 0 and len(candidates) > 1:
-                logger.warning("Artefak utama %s tidak ditemukan; mencoba fallback %s.", candidate, candidates[1])
-            continue
+    if not path.exists():
+        load_error = FileNotFoundError(f"File model tidak ditemukan: {path}")
+    else:
         try:
-            bundle = joblib.load(candidate)
-            validated = _validate_bundle(bundle, candidate)
+            with warnings.catch_warnings():
+                warnings.simplefilter("error", InconsistentVersionWarning)
+                bundle = joblib.load(path)
+            validated = _validate_bundle(bundle, path)
             if hasattr(validated["model"], "n_jobs"):
                 validated["model"].n_jobs = 1
             return validated
-        except Exception as exc:  # noqa: BLE001 — fallback lintas versi/korup
-            last_error = exc
-            if idx == 0 and len(candidates) > 1:
-                logger.warning(
-                    "Gagal memuat artefak utama %s (%s); beralih ke fallback %s.",
-                    candidate,
-                    exc,
-                    candidates[1],
-                )
-            else:
-                raise
+        except (InconsistentVersionWarning, Exception) as exc:  # noqa: BLE001
+            load_error = exc
 
-    assert last_error is not None
-    raise last_error
+    if auto_rebuild and raw_path.exists():
+        logger.warning(
+            "Artefak model %s tidak tersedia atau tidak kompatibel (%s); "
+            "membangun ulang otomatis untuk scikit-learn %s.",
+            path,
+            load_error,
+            sklearn.__version__,
+        )
+        return build_and_save_bundle(output_path=path, raw_path=raw_path, save_to_disk=True)
+
+    assert load_error is not None
+    raise load_error
