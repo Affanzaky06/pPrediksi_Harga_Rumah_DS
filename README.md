@@ -44,7 +44,7 @@ Klien utama: agen properti. Pemangku kepentingan lain: penjual rumah, calon pemb
 
 | Berkas / folder | Isi |
 |---|---|
-| `Proyek_Akhir_Prediksi_Harga_Rumah_Yogyakarta.ipynb` | **Notebook final (acuan penilaian):** Business Understanding → Data Understanding & Cleaning → EDA → Preprocessing → Modeling → Evaluation → Konklusi |
+| `prediksi.ipynb` | **Notebook final (acuan penilaian):** Business Understanding → Data Understanding & Cleaning → EDA → Preprocessing → Modeling → Evaluation → Konklusi |
 | `01`–`04` (notebook modular) | Versi bertahap yang menjadi bahan notebook final (tidak lagi menjadi acuan) |
 | `src/house_price/` | Kode pendukung: parsing, audit, cleaning, preprocessing, seleksi fitur, training, evaluasi, plot |
 | `data/` | Dataset mentah dan hasil olahan (`data/processed/`) |
