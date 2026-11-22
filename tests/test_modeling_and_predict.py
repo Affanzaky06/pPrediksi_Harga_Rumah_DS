@@ -194,25 +194,59 @@ class TestModelingAndPredict(unittest.TestCase):
         self.assertTrue(np.allclose(actual_batch, expected_batch, atol=1e-12))
         self.assertGreater(pred_single, 0.0)
 
+        from house_price.visualization.web_charts import (
+            make_actual_vs_pred_chart,
+            make_benchmark_chart,
+            make_correlation_heatmap,
+            make_residual_hist_chart,
+            make_wilayah_sim_chart,
+        )
+        self.assertIsNotNone(make_wilayah_sim_chart(sim_df, is_dark=True))
+        self.assertIsNotNone(make_correlation_heatmap(long_corr, is_dark=False))
+        test_eval_sample = mkt_df.copy()
+        self.assertIsNotNone(test_eval_sample)
+
         app_path = PROJECT_ROOT / "app.py"
         with tempfile.TemporaryDirectory() as tmpdir:
             py_compile.compile(str(app_path), cfile=str(Path(tmpdir) / "app.pyc"), doraise=True)
+            for page_file in (PROJECT_ROOT / "app_pages").glob("*.py"):
+                py_compile.compile(str(page_file), cfile=str(Path(tmpdir) / f"{page_file.stem}.pyc"), doraise=True)
 
         from streamlit.testing.v1 import AppTest
 
-        at = AppTest.from_file(str(app_path), default_timeout=20).run()
+        at = AppTest.from_file(str(app_path), default_timeout=25).run()
         self.assertFalse(at.exception)
         self.assertGreaterEqual(len(at.metric), 4)
 
-        # Save scenario button appends to comparison table
+        # Sample real test row & load into calculator
+        at.button(key="btn_sample_test").click().run()
+        self.assertFalse(at.exception)
+        self.assertIsNotNone(at.session_state["sampled_test_idx"])
+        at.button(key="btn_load_sample_to_calc").click().run()
+        self.assertFalse(at.exception)
+
+        # Save scenario button appends to comparison table, then reset
         at.button(key="btn_save_scenario").click().run()
         self.assertFalse(at.exception)
         self.assertEqual(len(at.session_state["demo_comparisons"]), 1)
-
-        # Reset button clears comparisons
         at.button(key="btn_reset_scenarios").click().run()
         self.assertFalse(at.exception)
         self.assertEqual(len(at.session_state["demo_comparisons"]), 0)
+
+        # Multipage navigation: Page 2 (EDA) & Page 3 (Metodologi)
+        at.switch_page("app_pages/02_eda.py").run()
+        self.assertFalse(at.exception)
+        at.switch_page("app_pages/03_metodologi.py").run()
+        self.assertFalse(at.exception)
+
+        # Ensure chart builders work with actual test evaluation frame
+        from house_price.web.loaders import get_model_bundle, get_pipeline_evaluation, get_model_benchmark
+        b_live, _ = get_model_bundle()
+        eval_live = get_pipeline_evaluation(b_live)
+        bench_live = get_model_benchmark()
+        self.assertIsNotNone(make_actual_vs_pred_chart(eval_live["test_eval_df"], is_dark=False))
+        self.assertIsNotNone(make_residual_hist_chart(eval_live["test_eval_df"], is_dark=True))
+        self.assertIsNotNone(make_benchmark_chart(bench_live, is_dark=False))
 
     def test_plots_render_headless(self):
         import matplotlib

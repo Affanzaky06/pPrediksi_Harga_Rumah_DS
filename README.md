@@ -118,15 +118,17 @@ Hasil EDA pada dataset analisis (data mentah dikurangi duplikat dan baris yang t
 ### Struktur Proyek Modular
 
 ```text
-├── app.py                              # Aplikasi web Streamlit (memanggil src/house_price/models/predict.py)
+├── app.py                              # Entrypoint multipage Streamlit (`st.navigation`)
+├── app_pages/                          # Halaman modular Streamlit (`01_kalkulator`, `02_eda`, `03_metodologi`)
 ├── main.py                             # Runner CLI end-to-end (build data -> train -> evaluasi -> simpan .joblib)
 ├── pyproject.toml                      # Konfigurasi paket Python (src layout)
 ├── src/house_price/
 │   ├── config.py                       # Path, seed, peta koreksi wilayah, aturan domain, parameter model
 │   ├── data/                           # parsing.py, audit.py, cleaning.py
 │   ├── features/                       # preprocessing.py, selection.py
-│   ├── models/                         # train.py, evaluate.py, predict.py
-│   └── visualization/                  # plots.py
+│   ├── models/                         # train.py, evaluate.py, predict.py, demo.py
+│   ├── visualization/                  # plots.py (notebook), web_charts.py (Altair web)
+│   └── web/                            # loaders.py (shared Streamlit cache & state)
 ├── notebooks/
 │   ├── 01_data_understanding_cleaning.ipynb
 │   ├── 02_eda.ipynb
