@@ -82,7 +82,7 @@ Agen properti di Yogyakarta umumnya menentukan harga pasang berdasarkan pengalam
 
 ## Temuan Sementara
 
-Hasil EDA pada dataset analisis (data mentah dikurangi duplikat dan baris yang terkena aturan pengecualian, **1.383 listing**):
+Hasil EDA pada dataset analisis (data mentah dikurangi duplikat dan baris yang terkena aturan pengecualian, **1.384 listing**):
 
 - **Harga sangat miring ke kanan** (skewness 3,42; median Rp 995 juta, rata-rata Rp 1,58 miliar). Transformasi logaritma menurunkan skewness menjadi 0,26.
 - **Luas bangunan paling berkaitan dengan harga** (Spearman 0,87), diikuti kamar mandi (0,81), luas tanah (0,80), dan kamar tidur (0,74). Carport lemah (0,39).
@@ -115,28 +115,63 @@ Hasil EDA pada dataset analisis (data mentah dikurangi duplikat dan baris yang t
 
 ## Cara Menjalankan
 
-1. **Klon repositori**
+### Struktur Proyek Modular
 
-   ```bash
-   git clone <url-repositori-anda>
-   cd <nama-folder>
-   ```
+```text
+├── app.py                              # Aplikasi web Streamlit (memanggil src/house_price/models/predict.py)
+├── main.py                             # Runner CLI end-to-end (build data -> train -> evaluasi -> simpan .joblib)
+├── pyproject.toml                      # Konfigurasi paket Python (src layout)
+├── src/house_price/
+│   ├── config.py                       # Path, seed, peta koreksi wilayah, aturan domain, parameter model
+│   ├── data/                           # parsing.py, audit.py, cleaning.py
+│   ├── features/                       # preprocessing.py, selection.py
+│   ├── models/                         # train.py, evaluate.py, predict.py
+│   └── visualization/                  # plots.py
+├── notebooks/
+│   ├── 01_data_understanding_cleaning.ipynb
+│   ├── 02_eda.ipynb
+│   ├── 03_preprocessing_feature_selection.ipynb
+│   └── 04_modeling_evaluation.ipynb
+├── tests/                              # Unit test (unittest / pytest)
+├── model_artifacts/
+│   ├── model_prediksi_rumah_jogja.joblib         # Artefak legacy (scikit-learn 1.8.0)
+│   └── model_prediksi_rumah_jogja_modular.joblib # Artefak pipeline modular (scikit-learn 1.9.0)
+└── progress2.ipynb                     # Arsip notebook monolitik awal
+```
 
-2. **Siapkan lingkungan Python** (disarankan 3.10 atau lebih baru)
+1. **Siapkan lingkungan Python** (disarankan 3.10 atau lebih baru)
 
    ```bash
    python -m venv .venv
    source .venv/bin/activate        # Windows: .venv\Scripts\activate
-   pip install pandas numpy matplotlib seaborn scikit-learn jupyter
+   pip install -r requirements.txt
    ```
 
-3. **Unduh dataset** dari Kaggle (tautan di bagian [Dataset](#dataset)).
+2. **Jalankan pipeline end-to-end via CLI** (membangun checkpoint `data/processed/` dan melatih ulang model ke `model_artifacts/model_prediksi_rumah_jogja_modular.joblib`):
 
-4. **Jalankan notebook**
+   ```bash
+   python main.py
+   ```
 
-   Jalankan sel **berurutan dari atas**. Beberapa sel memakai variabel dari sel sebelumnya (mis. `df_process`), sehingga menjalankan ulang sel di tengah dapat menyebabkan galat `KeyError`.
+3. **Jalankan notebook modular per fase (untuk eksplorasi & visualisasi)**
 
-5. **Periksa hasil.** Jumlah baris data mentah harus 2.020, dan jumlah yang terdeteksi pada tiap aturan anomali harus sama dengan tabel di atas.
+   Buka salah satu notebook di folder `notebooks/` (`01` hingga `04`). Setiap notebook dapat dijalankan per sel maupun berdiri sendiri karena otomatis memuat atau membangun checkpoint di `data/processed/`.
+
+4. **Jalankan pengujian otomatis**
+
+   ```bash
+   python -m unittest discover -s tests -v
+   ```
+
+5. **Jalankan aplikasi web Streamlit**
+
+   ```bash
+   streamlit run app.py
+   ```
+
+### Catatan Pengembangan Lanjutan
+- `GridSearchCV` dan `learning_curve` pada tahap modeling saat ini masih menggunakan `KFold` standar (`cv=3` / `cv=5`) agar sejalan dengan hasil awal; ke depan dapat ditingkatkan memakai `GroupKFold` per `deskripsi` untuk mencegah *leakage* antar unit kembar saat tuning.
+- `KOLOM_SCALE` masih menyertakan `kamar_tidur` dan `carport` untuk kompatibilitas skema scaler; ke depan dapat disederhanakan hanya pada fitur numerik/diskrit yang masuk `FITUR_FINAL`.
 
 ## Rencana Pemodelan (UAS)
 
