@@ -60,7 +60,7 @@ Folder `data/processed/` dibuat otomatis saat pipeline dijalankan dan tidak disi
 | Business Understanding | Selesai | Masalah, stakeholder, pertanyaan, tujuan SMART, metrik, risiko dan etika |
 | Data Understanding | Selesai | Sumber dan lisensi, kamus data, audit kualitas, EDA, representativitas |
 | Data Preparation | Selesai | Parsing, cleaning berurutan, split anti-leakage, imputasi, log10, encoding, scaling, seleksi fitur |
-| Modeling | Selesai | 5 model pembanding dengan GroupKFold, Random Forest sebagai model final |
+| Modeling | Selesai | 5 model pembanding di-*tuning* seluruhnya (`GridSearchCV` + kondisi `None` + `GroupKFold`), Random Forest sebagai model final |
 | Evaluation | Selesai | Metrik Rupiah dan persen, learning curve, residual, evaluasi per wilayah |
 | Deployment | Pelengkap | Demo Streamlit (`app.py`) memakai bundel model |
 
@@ -73,7 +73,7 @@ Folder `data/processed/` dibuat otomatis saat pipeline dijalankan dan tidak disi
 | Periode pengambilan | 20 Maret sampai 21 Mei 2024 (tidak ada tanggal per listing) |
 | Berkas | `rumah123_yogya_unfiltered.csv` |
 | Ukuran mentah | 2.020 baris dan 9 kolom |
-| Ukuran setelah cleaning | 1.384 baris (68,5% dari data mentah): 1.110 data latih dan 274 data uji |
+| Ukuran setelah cleaning | 1.384 baris (68,5% dari data mentah): 1.107 data latih dan 277 data uji |
 | Lisensi di Kaggle | Attribution-NonCommercial 4.0 International (CC BY-NC 4.0) |
 
 ### Kamus data (data mentah)
@@ -134,23 +134,33 @@ Dataset analisis: 1.384 listing (data mentah setelah cleaning).
 | Metrik | R², MAE, RMSE, MAPE, MdAPE; evaluasi per wilayah |
 | Target awal | MAPE ≤ 20% dan R² ≥ 0,75 pada data uji |
 
-**Perbandingan model (validasi silang GroupKFold, skala log10):** Random Forest, Gradient Boosting, dan SVR berada di kelompok terbaik (CV RMSE ≈ 0,15), sedangkan Linear Regression dan Ridge tertinggal (≈ 0,17). Tabel lengkap ada di bagian Modelling notebook final. Random Forest dipilih untuk di-*tuning* karena skornya setara model terbaik, tahan terhadap outlier harga, dan mudah dijelaskan lewat *feature importance*.
+**Perbandingan model (validasi silang GroupKFold 5-fold, skala log10):** Seluruh 5 kandidat model di-*tuning* terlebih dahulu menggunakan `GridSearchCV` dengan `GroupKFold` (5-fold) serta menyertakan kondisi `None` pada ruang pencarian hyperparameter setiap model:
 
-**Model final:** Random Forest (`n_estimators=200`, `max_depth=20`, `min_samples_leaf=2`, `min_samples_split=5`, `bootstrap=True`), hasil `GridSearchCV` dengan `GroupKFold` (CV RMSE 0,1426 pada skala log10). Ruang pencarian dipersempit menjadi 16 kombinasi karena keterbatasan perangkat komputasi.
+| Model | Baseline CV RMSE | Tuned CV RMSE | Δ RMSE | Tuned CV R² |
+|---|---:|---:|---:|---:|
+| **Random Forest** | 0,1512 | **0,1430** | **−0,0082** | **0,8353** |
+| **Gradient Boosting** | 0,1523 | 0,1456 | −0,0067 | 0,8292 |
+| **SVR (RBF)** | 0,1522 | 0,1516 | −0,0006 | 0,8138 |
+| **Ridge Regression** | 0,1640 | 0,1640 | 0,0000 | 0,7826 |
+| **Linear Regression** | 0,1640 | 0,1640 | 0,0000 | 0,7826 |
 
-### Hasil pada data uji (274 listing)
+Random Forest dipilih sebagai model pemenang karena meraih skor terbaik di seluruh metrik validasi silang setelah *tuning*, memperoleh penurunan error terbesar, tahan terhadap outlier harga, dan mudah dijelaskan lewat *feature importance*. Rincian `param_grid` (termasuk kondisi `None`) serta alasan untuk setiap pilihan tercantum di bagian Modelling `prediksi.ipynb`.
+
+**Model final:** Random Forest (`n_estimators=300`, `max_depth=None`, `max_features='sqrt'`, `min_samples_leaf=2`, `min_samples_split=5`, `bootstrap=True`), hasil `GridSearchCV` dengan `GroupKFold` (CV RMSE `0,1430` pada skala log10, turun dari baseline `0,1512`).
+
+### Hasil pada data uji (277 listing)
 
 | Metrik | Nilai | Target | Status |
 |---|---|---|---|
-| R² | 85,77% | ≥ 75% | Tercapai |
-| MAE | Rp 422.640.860 | - | - |
-| RMSE | Rp 964.431.107 | - | - |
-| MdAPE | 15,57% | - | - |
-| MAPE | 23,23% | ≤ 20% | Belum tercapai |
+| R² | 87,14% | ≥ 75% | Tercapai |
+| MAE | Rp 354.905.653 | - | - |
+| RMSE | Rp 840.362.311 | - | - |
+| MdAPE | 14,17% | - | - |
+| MAPE | 21,56% | ≤ 20% | Belum tercapai |
 
-MAE sekitar Rp 423 juta berarti prediksi rata-rata meleset sekitar nilai tersebut dari harga penawaran sebenarnya. Pada rumah yang tipikal, prediksi meleset sekitar 15,6% (MdAPE).
+MAE sekitar Rp 354,9 juta berarti prediksi rata-rata meleset sekitar nilai tersebut dari harga penawaran sebenarnya. Pada rumah yang tipikal, prediksi meleset sekitar 14,2% (MdAPE).
 
-**Kinerja per wilayah (MdAPE):** Sleman 14,26% (191 sampel), Bantul 15,54% (49 sampel), Kota Yogyakarta 26,16% (26 sampel, terlemah), dan Kulon Progo/Gunung Kidul 9,59% (hanya 8 sampel sehingga tidak dapat disimpulkan). Model cenderung memprediksi terlalu rendah untuk rumah di atas sekitar Rp 4 miliar. Pembahasan lengkap ada di bagian Evaluasi dan Konklusi notebook final.
+**Kinerja per wilayah (MdAPE):** Sleman **13,39%** (200 sampel, MAPE 19,08%), Kota Yogyakarta **19,55%** (26 sampel, MAPE 32,57%), Bantul **19,64%** (44 sampel, MAPE 28,61%), dan Kulon Progo/Gunung Kidul **10,89%** (hanya 7 sampel sehingga tidak dapat disimpulkan). Model cenderung memprediksi terlalu rendah untuk rumah di atas sekitar Rp 4 miliar. Pembahasan lengkap ada di bagian Evaluasi dan Konklusi notebook final.
 
 ## Cara Menjalankan
 
@@ -166,21 +176,21 @@ MAE sekitar Rp 423 juta berarti prediksi rata-rata meleset sekitar nilai tersebu
    pip install -r requirements.txt
    ```
 3. Pastikan dataset `rumah123_yogya_unfiltered.csv` ada di folder utama repositori (unduh dari Kaggle melalui tautan di bagian Sitasi jika belum ada).
-4. Jalankan **`prediksi.ipynb`** dari sel paling atas secara berurutan (*Restart & Run All*). Beberapa sel memakai variabel dari sel sebelumnya, sehingga menjalankan ulang sel di tengah dapat menyebabkan `KeyError`. Tahap *grid search* membutuhkan beberapa menit, lebih lama pada perangkat yang lambat.
-5. Periksa hasil: data mentah 2.020 baris, data bersih 1.384 baris (1.110 latih dan 274 uji), dan metrik Random Forest pada data uji sesuai tabel hasil (R² 85,77%, MAE Rp 422.640.860, MdAPE 15,57%). Seluruh proses acak memakai `random_state=42`, tetapi angka dapat berbeda tipis pada versi `scikit-learn` yang berbeda.
+4. Jalankan **`prediksi.ipynb`** dari sel paling atas secara berurutan (*Restart & Run All*). Beberapa sel memakai variabel dari sel sebelumnya, sehingga menjalankan ulang sel di tengah dapat menyebabkan `KeyError`. Tahap *grid search* 5 model membutuhkan sekitar 1 menit pada CPU modern (lebih lama pada perangkat yang lambat). Atau jalankan pipeline CLI: `python main.py` (mode cepat dengan `BEST_RF_PARAMS`) / `python main.py --grid-search` (tuning penuh ke-5 kandidat model).
+5. Periksa hasil: data mentah 2.020 baris, data bersih 1.384 baris (1.107 latih dan 277 uji), dan metrik Random Forest pada data uji sesuai tabel hasil (R² 87,14%, MAE Rp 354.905.653, MdAPE 14,17%). Seluruh proses acak memakai `random_state=42`, tetapi angka dapat berbeda tipis pada versi `scikit-learn` yang berbeda.
 6. (Opsional) Demo web: `pip install streamlit altair`, lalu `streamlit run app.py`.
 
 ## Keterbatasan
 
 - Target adalah harga penawaran, bukan harga transaksi.
 - Data hanya dari satu platform (Rumah123) dan satu periode (Maret sampai Mei 2024), sehingga dapat berbeda dari kondisi pasar saat ini.
-- Tidak tersedia tanggal listing, koordinat, tahun bangun, kondisi bangunan, maupun status sertifikat. Ini kemungkinan penyebab utama error tinggi di Kota Yogyakarta, tempat harga bergantung pada lokasi mikro.
-- Sebaran wilayah timpang, sehingga hasil tidak digeneralisasi ke seluruh DIY. Evaluasi Kulon Progo/Gunung Kidul hanya berdasar 8 sampel uji.
+- Tidak tersedia tanggal listing, koordinat, tahun bangun, kondisi bangunan, maupun status sertifikat. Ini kemungkinan penyebab utama error tinggi (MAPE 32,57%) di Kota Yogyakarta, tempat harga bergantung pada lokasi mikro.
+- Sebaran wilayah timpang, sehingga hasil tidak digeneralisasi ke seluruh DIY. Evaluasi Kulon Progo/Gunung Kidul hanya berdasar 7 sampel uji.
 - Pembersihan properti non-hunian berbasis kata kunci pada judul dan dapat meleset. Ambang jumlah kamar paling sensitif dan perlu dikonfirmasi pelaku pasar.
 - Pemetaan wilayah administratif dibuat manual dan perlu diverifikasi dengan data batas resmi.
-- Model sedikit *overfitting* (R² latih 0,94 vs uji 0,86) dan cenderung memprediksi terlalu rendah untuk rumah mahal.
-- Target MAPE ≤ 20% belum tercapai (23,23%), dan akurasi paling lemah di Kota Yogyakarta (MdAPE 26,16%).
-- Ruang pencarian hiperparameter dipersempit karena keterbatasan perangkat komputasi.
+- Model sedikit *overfitting* ringan (R² latih 0,922 vs uji 0,871) dan cenderung memprediksi terlalu rendah untuk rumah mahal.
+- Target MAPE ≤ 20% secara global belum tercapai (21,56%), meskipun pada wilayah Sleman sudah mencapai 19,08%, dan error terbesar (MAPE 32,57%, MAE Rp 718,4 juta) terjadi di Kota Yogyakarta.
+- Seluruh 5 kandidat model telah di-*tuning* dengan menyertakan kondisi `None` (360 kombinasi / 1.800 fit CV), sehingga keterbatasan akurasi terutama berasal dari absennya fitur lokasi mikro dan kondisi fisik bangunan, bukan kurangnya eksplorasi model.
 
 ## Lisensi, Etika, dan Sitasi
 
