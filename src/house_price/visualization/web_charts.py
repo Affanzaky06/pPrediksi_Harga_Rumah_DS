@@ -189,23 +189,29 @@ def make_benchmark_chart(df_bench: pd.DataFrame, is_dark: bool = False) -> alt.C
     best_model = df_plot.sort_values("CV RMSE (log)").iloc[0]["Model"]
     df_plot["Status"] = np.where(df_plot["Model"] == best_model, "Terpilih", "Pembanding")
 
+    tooltips = [alt.Tooltip("Model:N")]
+    if "Baseline CV RMSE (log)" in df_plot.columns:
+        tooltips.append(alt.Tooltip("Baseline CV RMSE (log):Q", format=".4f", title="Baseline RMSE"))
+    tooltips.extend([
+        alt.Tooltip("CV RMSE (log):Q", format=".4f", title="Tuned CV RMSE"),
+        alt.Tooltip("CV MAE (log):Q", format=".4f", title="Tuned CV MAE"),
+        alt.Tooltip("CV R2:Q", format=".4f", title="Tuned CV R²"),
+    ])
+    if "Best Hyperparameters" in df_plot.columns:
+        tooltips.append(alt.Tooltip("Best Hyperparameters:N", title="Best Params"))
+
     return (
         alt.Chart(df_plot)
         .mark_bar(cornerRadiusEnd=6)
         .encode(
-            x=alt.X("CV RMSE (log):Q", title="CV RMSE (skala log10 — makin kecil makin baik)"),
+            x=alt.X("CV RMSE (log):Q", title="Tuned CV RMSE (skala log10 — makin kecil makin baik)"),
             y=alt.Y("Model:N", sort="x", title=""),
             color=alt.Color(
                 "Status:N",
                 scale=alt.Scale(domain=["Terpilih", "Pembanding"], range=[best_color, other_color]),
                 legend=None,
             ),
-            tooltip=[
-                alt.Tooltip("Model:N"),
-                alt.Tooltip("CV RMSE (log):Q", format=".4f"),
-                alt.Tooltip("CV MAE (log):Q", format=".4f"),
-                alt.Tooltip("CV R2:Q", format=".4f"),
-            ],
+            tooltip=tooltips,
         )
         .properties(height=220)
     )

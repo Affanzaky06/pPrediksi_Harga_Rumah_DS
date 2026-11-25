@@ -76,26 +76,36 @@ with col_v2:
         )
         st.caption("Residual terpusat simetris di sekitar `0`, mengindikasikan tidak ada bias sistematis.")
 
-# Perbandingan benchmark 5 kandidat model
+# Perbandingan 5 kandidat model setelah hyperparameter tuning
 with st.container(border=True):
-    st.subheader("Perbandingan benchmark 5 kandidat model (GroupKFold 5-Fold)", icon=":material/analytics:")
+    st.subheader(
+        "Perbandingan 5 kandidat model setelah hyperparameter tuning (GroupKFold 5-Fold)",
+        icon=":material/analytics:",
+    )
+    st.caption(
+        "Seluruh 5 kandidat model di-tuning menggunakan GridSearchCV + GroupKFold (5-fold) "
+        "dengan menyertakan kondisi `None` di setiap ruang pencarian."
+    )
     df_bench = get_model_benchmark()
-    b_col1, b_col2 = st.columns([3, 2], gap="large")
+    b_col1, b_col2 = st.columns([2, 3], gap="large")
     with b_col1:
         st.altair_chart(
             make_benchmark_chart(df_bench, is_dark=is_dark),
-            alt="Perbandingan CV RMSE lima kandidat algoritma regresi",
+            alt="Perbandingan CV RMSE lima kandidat algoritma regresi setelah hyperparameter tuning",
         )
     with b_col2:
         st.dataframe(
             df_bench,
             hide_index=True,
             column_config={
-                "CV RMSE (log)": st.column_config.NumberColumn("CV RMSE", format="%.4f"),
-                "CV MAE (log)": st.column_config.NumberColumn("CV MAE", format="%.4f"),
-                "CV R2": st.column_config.NumberColumn("CV R²", format="%.4f"),
+                "Baseline CV RMSE (log)": st.column_config.NumberColumn("Baseline RMSE", format="%.4f"),
+                "CV RMSE (log)": st.column_config.NumberColumn("Tuned CV RMSE", format="%.4f"),
+                "Delta RMSE": st.column_config.NumberColumn("Delta RMSE", format="%.4f"),
+                "CV MAE (log)": st.column_config.NumberColumn("Tuned MAE", format="%.4f"),
+                "CV R2": st.column_config.NumberColumn("Tuned R²", format="%.4f"),
+                "Best Hyperparameters": st.column_config.TextColumn("Best Hyperparameters"),
             },
-            alt="Tabel metrik cross-validation lima kandidat model regresi",
+            alt="Tabel metrik cross-validation lima kandidat model regresi sebelum dan sesudah tuning",
         )
 
 with st.container(border=True):
@@ -108,7 +118,7 @@ with st.container(border=True):
             C --> D["StratifiedGroupKFold (1.107 Train / 277 Test)"]
             D --> E["Imputasi Train-Only + Log10 + StandardScaler"]
             E --> F["Seleksi Fitur: VIF & Drop-Column CV (6 Fitur)"]
-            F --> G["Random Forest (100 trees, max_features=0.5) + Estimasi Streamlit"]
+            F --> G["Tuning 5 Model (GridSearchCV + Kondisi None) → Random Forest (300 trees, max_depth=None, max_features='sqrt')"]
         """,
         alt="Diagram alur pipeline Data Science dari data mentah hingga prediksi Streamlit",
     )
@@ -153,7 +163,8 @@ with st.container(border=True):
         {"Komponen": "Split anti-leakage", "Implementasi": "StratifiedGroupKFold (80/20) dikelompokkan per judul deskripsi"},
         {"Komponen": "Imputasi & encoding", "Implementasi": "Median train-only (KT=3, KM=2), OHE wilayah (baseline: Bantul)"},
         {"Komponen": "Transformasi & scaling", "Implementasi": "Log10 target & luas; StandardScaler fit hanya pada data train"},
-        {"Komponen": "Algoritma model", "Implementasi": "RandomForestRegressor (n_estimators=100, max_depth=15, max_features=0.5, min_samples_leaf=2, min_samples_split=5)"},
+        {"Komponen": "Pemilihan & tuning model", "Implementasi": "5 kandidat di-tuning via GridSearchCV (GroupKFold 5-fold, termasuk opsi None)"},
+        {"Komponen": "Model final terpilih", "Implementasi": "RandomForestRegressor (n_estimators=300, max_depth=None, max_features='sqrt', min_samples_leaf=2, min_samples_split=5, bootstrap=True)"},
     ])
     st.table(spec_df, alt="Ringkasan spesifikasi teknis tiap tahap pipeline machine learning")
 

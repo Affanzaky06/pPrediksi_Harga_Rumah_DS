@@ -264,6 +264,8 @@ class TestModelingAndPredict(unittest.TestCase):
         at = AppTest.from_file(str(app_path), default_timeout=25).run()
         self.assertFalse(at.exception)
         self.assertGreaterEqual(len(at.metric), 4)
+        all_captions = "\n".join(c.value for c in at.caption)
+        self.assertIn("300 trees", all_captions)
 
         # Sample real test row & load into calculator
         at.button(key="btn_sample_test").click().run()
@@ -291,6 +293,9 @@ class TestModelingAndPredict(unittest.TestCase):
         b_live, _ = get_model_bundle()
         eval_live = get_pipeline_evaluation(b_live)
         bench_live = get_model_benchmark()
+        self.assertAlmostEqual(eval_live["metrics"]["r2"], 0.8714, places=3)
+        self.assertIn("Baseline CV RMSE (log)", bench_live.columns)
+        self.assertIn("Best Hyperparameters", bench_live.columns)
         self.assertIsNotNone(make_actual_vs_pred_chart(eval_live["test_eval_df"], is_dark=False))
         self.assertIsNotNone(make_residual_hist_chart(eval_live["test_eval_df"], is_dark=True))
         self.assertIsNotNone(make_benchmark_chart(bench_live, is_dark=False))

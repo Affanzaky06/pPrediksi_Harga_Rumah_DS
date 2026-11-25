@@ -88,10 +88,14 @@ with st.sidebar:
         "- Abyaz Affanzaky Shanahan (`123240130`)"
     )
 
+    n_trees = getattr(bundle["model"], "n_estimators", 300)
+    max_feat = getattr(bundle["model"], "max_features", "sqrt")
+    max_depth = getattr(bundle["model"], "max_depth", None)
+
     st.markdown("**Ringkasan artefak**")
     st.caption(
         f"Artefak: `{artifact_name}`\n"
-        "Algoritma: `RandomForestRegressor` (100 trees, tuned)\n"
+        f"Algoritma: `RandomForestRegressor` ({n_trees} trees, max_features={max_feat!r}, max_depth={max_depth!r})\n"
         "Fitur final: 6 fitur (log-luas, kamar mandi, dummy wilayah)"
     )
 
@@ -102,7 +106,7 @@ st.caption(
 )
 
 with st.container(horizontal=True):
-    st.badge("Random Forest (100 trees, tuned)", icon=":material/layers:", color="blue")
+    st.badge(f"Random Forest ({n_trees} trees, tuned)", icon=":material/layers:", color="blue")
     st.badge(f"R² Test: {metrics['r2'] * 100:.2f}%", icon=":material/analytics:", color="green")
     st.badge(f"MdAPE: {metrics['mdape']:.2f}%", icon=":material/fact_check:", color="violet")
     st.badge(f"{len(df_clean):,} listing bersih", icon=":material/dataset:", color="gray")
