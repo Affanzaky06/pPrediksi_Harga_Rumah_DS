@@ -31,10 +31,14 @@ from house_price.models.demo import (
 from house_price.models.evaluate import compute_regression_metrics, evaluate_by_wilayah
 from house_price.models.predict import format_rupiah, predict_batch_log, predict_house_price
 from house_price.models.train import (
+    BEST_TUNED_PARAMS_5_MODELS,
+    PARAM_GRIDS_5_MODELS,
     REQUIRED_BUNDLE_KEYS,
+    benchmark_models,
     load_model_bundle,
     save_model_bundle,
     train_final_model,
+    tune_all_candidate_models,
 )
 
 
@@ -101,9 +105,52 @@ class TestModelingAndPredict(unittest.TestCase):
 
         self.assertGreater(metrics["r2"], 0.85)
         self.assertLess(metrics["mdape"], 20.0)
+        self.assertAlmostEqual(metrics["r2"], 0.8714, places=3)
+        self.assertAlmostEqual(metrics["mdape"], 14.17, places=1)
 
         eval_wil = evaluate_by_wilayah(self.prep.test_df, metrics["y_pred_rupiah"])
         self.assertEqual(int(eval_wil["Jumlah_Sampel"].sum()), 277)
+
+    def test_param_grids_include_none_and_benchmark_tuned_models(self):
+        expected_models = {
+            "Linear Regression",
+            "Ridge Regression",
+            "SVR (RBF)",
+            "Random Forest",
+            "Gradient Boosting",
+        }
+        self.assertEqual(set(PARAM_GRIDS_5_MODELS.keys()), expected_models)
+        self.assertEqual(set(BEST_TUNED_PARAMS_5_MODELS.keys()), expected_models)
+        self.assertIn(None, PARAM_GRIDS_5_MODELS["Ridge Regression"]["max_iter"])
+        self.assertIn(None, PARAM_GRIDS_5_MODELS["Random Forest"]["max_depth"])
+        self.assertIn(None, PARAM_GRIDS_5_MODELS["Random Forest"]["max_features"])
+        self.assertIn(None, PARAM_GRIDS_5_MODELS["Gradient Boosting"]["max_depth"])
+        self.assertIn(None, PARAM_GRIDS_5_MODELS["Gradient Boosting"]["max_features"])
+
+        groups = self.prep.train_df["deskripsi"].str.lower()
+        df_bench = benchmark_models(self.prep.X_train_final, self.prep.y_train, groups=groups)
+        self.assertEqual(len(df_bench), 5)
+        self.assertEqual(df_bench.iloc[0]["Model"], "Random Forest")
+        self.assertLess(float(df_bench.iloc[0]["CV RMSE (log)"]), 0.144)
+        self.assertIn("Baseline CV RMSE (log)", df_bench.columns)
+        self.assertIn("Delta RMSE", df_bench.columns)
+        self.assertIn("Best Hyperparameters", df_bench.columns)
+
+        smoke_grids = {
+            name: {k: [v[0]] for k, v in grid.items()}
+            for name, grid in PARAM_GRIDS_5_MODELS.items()
+        }
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", UserWarning)
+            df_tune, best_estimators = tune_all_candidate_models(
+                self.prep.X_train_final,
+                self.prep.y_train,
+                groups=groups,
+                param_grids=smoke_grids,
+                n_jobs=1,
+            )
+        self.assertEqual(len(df_tune), 5)
+        self.assertEqual(set(best_estimators.keys()), expected_models)
 
     def test_predict_house_price_valid_and_invalid_inputs(self):
         with tempfile.TemporaryDirectory() as tmpdir:

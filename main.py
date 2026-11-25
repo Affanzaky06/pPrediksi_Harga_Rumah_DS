@@ -19,9 +19,10 @@ from house_price.features.preprocessing import (
 )
 from house_price.models.evaluate import compute_regression_metrics, evaluate_by_wilayah
 from house_price.models.train import (
-    run_rf_grid_search,
+    benchmark_models,
     save_model_bundle,
     train_final_model,
+    tune_all_candidate_models,
 )
 
 
@@ -39,17 +40,27 @@ def run_pipeline(
 
     prep = run_preprocessing_pipeline(df_clean)
     save_preprocessed_artifacts(prep, output_dir=processed_dir)
+    groups = prep.train_df["deskripsi"].str.lower()
 
     if use_grid_search:
-        model, best_params, _ = run_rf_grid_search(
+        df_bench, best_estimators = tune_all_candidate_models(
             prep.X_train_final,
             prep.y_train,
-            X_test_final=prep.X_test_final,
-            y_test=prep.y_test,
-            groups=prep.train_df["deskripsi"].str.lower(),
+            groups=groups,
         )
-        print(f"Best parameters (GridSearchCV): {best_params}")
+        best_name = str(df_bench.iloc[0]["Model"])
+        model = best_estimators[best_name]
+        print("\n=== PERBANDINGAN 5 MODEL (GRIDSEARCHCV + KONDISI NONE) ===")
+        print(df_bench.to_string(index=False))
+        print(f"\nModel terbaik: {best_name} | Best parameters: {df_bench.iloc[0]['Best Hyperparameters']}")
     else:
+        df_bench = benchmark_models(prep.X_train_final, prep.y_train, groups=groups)
+        print("\n=== PERBANDINGAN 5 MODEL (BASELINE VS TUNED) ===")
+        print(
+            df_bench[
+                ["Model", "Baseline CV RMSE (log)", "CV RMSE (log)", "Delta RMSE", "CV MAE (log)", "CV R2"]
+            ].to_string(index=False)
+        )
         model = train_final_model(prep.X_train_final, prep.y_train)
 
     y_test_pred_log = model.predict(prep.X_test_final)
@@ -77,7 +88,7 @@ def main() -> None:
     parser.add_argument(
         "--grid-search",
         action="store_true",
-        help="Jalankan GridSearchCV penuh (default: langsung gunakan BEST_RF_PARAMS).",
+        help="Jalankan GridSearchCV penuh pada seluruh 5 kandidat model (default: gunakan BEST_RF_PARAMS).",
     )
     parser.add_argument(
         "--output-model",
