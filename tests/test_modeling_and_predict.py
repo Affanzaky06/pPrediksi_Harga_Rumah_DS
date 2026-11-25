@@ -34,6 +34,7 @@ from house_price.models.train import (
     BEST_TUNED_PARAMS_5_MODELS,
     PARAM_GRIDS_5_MODELS,
     REQUIRED_BUNDLE_KEYS,
+    _build_default_candidates,
     benchmark_models,
     load_model_bundle,
     save_model_bundle,
@@ -136,6 +137,8 @@ class TestModelingAndPredict(unittest.TestCase):
         self.assertIn("Delta RMSE", df_bench.columns)
         self.assertIn("Best Hyperparameters", df_bench.columns)
 
+        self.assertEqual(_build_default_candidates()["Random Forest"].n_jobs, 1)
+
         smoke_grids = {
             name: {k: [v[0]] for k, v in grid.items()}
             for name, grid in PARAM_GRIDS_5_MODELS.items()
@@ -147,10 +150,24 @@ class TestModelingAndPredict(unittest.TestCase):
                 self.prep.y_train,
                 groups=groups,
                 param_grids=smoke_grids,
-                n_jobs=1,
+                n_jobs=2,
             )
         self.assertEqual(len(df_tune), 5)
         self.assertEqual(set(best_estimators.keys()), expected_models)
+
+    def test_prediksi_notebook_markdown_consistency(self):
+        import json
+
+        nb = json.loads((PROJECT_ROOT / "prediksi.ipynb").read_text(encoding="utf-8"))
+        cell87 = "".join(nb["cells"][87]["source"])
+        self.assertNotIn("21 area", cell87)
+        self.assertIn("24 area memiliki $<5$ sampel di data train", cell87)
+
+        for idx in range(87, len(nb["cells"])):
+            cell = nb["cells"][idx]
+            if cell["cell_type"] == "markdown":
+                src = "".join(cell["source"])
+                self.assertNotIn("\t", src, f"Cell {idx} markdown contains literal TAB breaking LaTeX")
 
     def test_predict_house_price_valid_and_invalid_inputs(self):
         with tempfile.TemporaryDirectory() as tmpdir:
